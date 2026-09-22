@@ -3,6 +3,7 @@
 Copy your three completed distance functions from Lab 02, then complete
 label prediction and the KnnClassifier methods below.
 """
+
 import torch
 
 
@@ -53,18 +54,11 @@ def compute_distances_two_loops(x_train: torch.Tensor, x_test: torch.Tensor):
     num_train = x_train.shape[0]
     num_test = x_test.shape[0]
     dists = x_train.new_zeros(num_train, num_test)
-    ##########################################################################
-    # TODO: Implement this function using a pair of nested loops over the    #
-    # training data and the test data.                                       #
-    #                                                                        #
-    # You may not use torch.norm (or its instance method variant), nor any   #
-    # functions from torch.nn or torch.nn.functional.                        #
-    ##########################################################################
-    # Replace "pass" statement with your code
-    pass
-    ##########################################################################
-    #                           END OF YOUR CODE                             #
-    ##########################################################################
+    x_train = x_train.reshape(num_train, -1)
+    x_test = x_test.reshape(num_test, -1)
+    for i in range(num_train):
+        for j in range(num_test):
+            dists[i, j] = torch.sum((x_train[i] - x_test[j]) ** 2)
     return dists
 
 
@@ -98,17 +92,10 @@ def compute_distances_one_loop(x_train: torch.Tensor, x_test: torch.Tensor):
     num_train = x_train.shape[0]
     num_test = x_test.shape[0]
     dists = x_train.new_zeros(num_train, num_test)
-    ##########################################################################
-    # TODO: Implement this function using only a single loop over x_train.   #
-    #                                                                        #
-    # You may not use torch.norm (or its instance method variant), nor any   #
-    # functions from torch.nn or torch.nn.functional.                        #
-    ##########################################################################
-    # Replace "pass" statement with your code
-    pass
-    ##########################################################################
-    #                           END OF YOUR CODE                             #
-    ##########################################################################
+    x_train = x_train.reshape(num_train, -1)
+    x_test = x_test.reshape(num_test, -1)
+    for i in range(num_train):
+        dists[i] = torch.sum((x_train[i] - x_test) ** 2, dim=1)
     return dists
 
 
@@ -118,10 +105,7 @@ def compute_distances_no_loops(x_train: torch.Tensor, x_test: torch.Tensor):
     set and each element of test set. Images should be flattened and treated
     as vectors.
 
-    This implementation should not use any Python loops. For memory-efficiency,
-    it also should not create any large intermediate tensors; in particular you
-    should not create any intermediate tensors with O(num_train * num_test)
-    elements.
+    This implementation should not use any Python loops.
 
     Similar to `compute_distances_two_loops`, this should be able to handle
     inputs with any number of dimensions. The inputs should not be modified.
@@ -144,23 +128,16 @@ def compute_distances_no_loops(x_train: torch.Tensor, x_test: torch.Tensor):
     # same datatype and device as x_train
     num_train = x_train.shape[0]
     num_test = x_test.shape[0]
-    dists = x_train.new_zeros(num_train, num_test)
-    ##########################################################################
-    # TODO: Implement this function without using any explicit loops and     #
-    # without creating any intermediate tensors with O(num_train * num_test) #
-    # elements.                                                              #
-    #                                                                        #
-    # You may not use torch.norm (or its instance method variant), nor any   #
-    # functions from torch.nn or torch.nn.functional.                        #
-    #                                                                        #
-    # HINT: Try to formulate the Euclidean distance using two broadcast sums #
-    #       and a matrix multiply.                                           #
-    ##########################################################################
-    # Replace "pass" statement with your code
-    pass
-    ##########################################################################
-    #                           END OF YOUR CODE                             #
-    ##########################################################################
+    x_train = x_train.reshape(num_train, -1)
+    x_test = x_test.reshape(num_test, -1)
+
+    x_train_sq = torch.sum(x_train ** 2, dim=1, keepdim=True)
+
+    x_test_sq = torch.sum(x_test ** 2, dim=1).reshape(1, -1)
+
+    twoxy = 2 * (x_train @ x_test.t())
+
+    dists = x_train_sq + x_test_sq - twoxy
     return dists
 
 
@@ -191,24 +168,38 @@ def predict_labels(dists: torch.Tensor, y_train: torch.Tensor, k: int = 1):
             test example. Each label should be an integer in the range
             [0, num_classes - 1].
     """
-    num_train, num_test = dists.shape
-    y_pred = torch.zeros(num_test, dtype=torch.int64)
-    ##########################################################################
-    # TODO: Implement this function. You may use an explicit loop over the   #
-    # test samples.                                                          #
-    #                                                                        #
-    # HINT: Look up the function torch.topk                                  #
-    ##########################################################################
-    # Replace "pass" statement with your code
-    pass
-    ##########################################################################
-    #                           END OF YOUR CODE                             #
-    ##########################################################################
+    _, num_test = dists.shape
+    y_pred = torch.zeros(num_test, dtype=torch.int64, device=dists.device)
+
+    # 1. Find the indices of the k smallest distances for each test column.
+    # We look along dim=0 (training instances) for each test instance.
+    # topk returns values and indices; we only need indices.
+    _, knn_indices = torch.topk(dists, k, dim=0, largest=False, sorted=True)
+
+    # Transpose knn_indices so it has shape (num_test, k) for cleaner looping
+    knn_indices = knn_indices.t()
+
+    # 2. Iterate through each test example to determine the majority vote
+    for j in range(num_test):
+        # Map the training neighbor indices to their actual class labels
+        neighbor_labels = y_train[knn_indices[j]]
+
+        # Count frequencies of each label among the neighbors
+        labels, counts = torch.unique(neighbor_labels, return_counts=True)
+
+        # Find the maximum vote count
+        max_count = torch.max(counts)
+
+        # Identify all labels that achieved the maximum vote count (handles ties)
+        winning_labels = labels[counts == max_count]
+
+        # Tie-breaker rule: Return the smallest numerical label
+        y_pred[j] = torch.min(winning_labels)
+
     return y_pred
 
 
 class KnnClassifier:
-
     def __init__(self, x_train: torch.Tensor, y_train: torch.Tensor):
         """
         Create a new K-Nearest Neighbor classifier with the specified training
@@ -218,16 +209,8 @@ class KnnClassifier:
             x_train: Tensor of shape (num_train, C, H, W) giving training data
             y_train: int64 Tensor of shape (num_train, ) giving training labels
         """
-        ######################################################################
-        # TODO: Implement the initializer for this class. It should perform  #
-        # no computation and simply memorize the training data in            #
-        # `self.x_train` and `self.y_train`, accordingly.                    #
-        ######################################################################
-        # Replace "pass" statement with your code
-        pass
-        ######################################################################
-        #                         END OF YOUR CODE                           #
-        ######################################################################
+        self.x_train = x_train
+        self.y_train = y_train
 
     def predict(self, x_test: torch.Tensor, k: int = 1):
         """
@@ -241,25 +224,15 @@ class KnnClassifier:
             y_test_pred: Tensor of shape (num_test,) giving predicted labels
                 for the test samples.
         """
-        y_test_pred = None
-        ######################################################################
-        # TODO: Implement this method. You should use the functions you      #
-        # wrote above for computing distances (use the no-loop variant) and  #
-        # to predict output labels.                                          #
-        ######################################################################
-        # Replace "pass" statement with your code
-        pass
-        ######################################################################
-        #                         END OF YOUR CODE                           #
-        ######################################################################
+        dists = compute_distances_no_loops(self.x_train, x_test)
+
+        # 2. Predict output labels using the distance matrix
+        y_test_pred = predict_labels(dists, self.y_train, k=k)
+
         return y_test_pred
 
     def check_accuracy(
-        self,
-        x_test: torch.Tensor,
-        y_test: torch.Tensor,
-        k: int = 1,
-        quiet: bool = False
+        self, x_test: torch.Tensor, y_test: torch.Tensor, k: int = 1, quiet: bool = False
     ):
         """
         Utility method for checking the accuracy of this classifier on test
@@ -280,10 +253,7 @@ class KnnClassifier:
         num_samples = x_test.shape[0]
         num_correct = (y_test == y_test_pred).sum().item()
         accuracy = 100.0 * num_correct / num_samples
-        msg = (
-            f"Got {num_correct} / {num_samples} correct; "
-            f"accuracy is {accuracy:.2f}%"
-        )
+        msg = f"Got {num_correct} / {num_samples} correct; accuracy is {accuracy:.2f}%"
         if not quiet:
             print(msg)
         return accuracy

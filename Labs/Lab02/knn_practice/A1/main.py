@@ -9,7 +9,14 @@ from knn import compute_distances_no_loops, compute_distances_one_loop, compute_
 
 plt.rcParams["figure.figsize"] = (10.0, 8.0)
 plt.rcParams["font.size"] = 16
+
+x_train: torch.Tensor
+y_train: torch.Tensor
+x_test: torch.Tensor
+y_test: torch.Tensor
+
 x_train, y_train, x_test, y_test = dlcv2026.data.cifar10()
+
 
 print(
     "Training set:",
@@ -28,7 +35,7 @@ for y, cls in enumerate(classes):
     plt.text(-4, 34 * y + 18, cls, ha="right")
     (idxs,) = (y_train == y).nonzero(as_tuple=True)
     for i in range(samples_per_class):
-        idx = idxs[random.randrange(idxs.shape[0])].item()
+        idx = int(idxs[random.randrange(idxs.shape[0])].item())
         samples.append(x_train[idx])
 img = torchvision.utils.make_grid(samples, nrow=samples_per_class)
 plt.imshow(dlcv2026.tensor_to_image(img))
@@ -118,77 +125,3 @@ print(f"One loop version took {one_loop_time:.2f} seconds ({speedup:.1f}X speedu
 no_loop_time = timeit(compute_distances_no_loops, x_train_rand, x_test_rand)
 speedup = two_loop_time / no_loop_time
 print(f"No loop version took {no_loop_time:.2f} seconds ({speedup:.1f}X speedup)")
-  " "22K KQ2QW *$4a80d146-12c5-42e2-ac29-6561c33d563208WX Xd 	dĞ 
-Ğ± ±²
-²· ·¸
-¸º º»
-»¾ ¾¿
-¿Á ÁÂ
-ÂÆ ÆÇ
-ÇÉ ÉÊ
-ÊÍ ÍÎ
-ÎĞ ĞÑ
-ÑÕ ÕÖ
-ÖØ ØÙ
-ÙÜ Üİ
-İß ßà
-àä äå
-åç çè
-èí íî
-îğ ğñ
-ñõ õö
-öø øù
-ùş şÿ
-ÿí íî
-îó óô
-ôú úû
-û€ €
-§ §¨
-¨« «¬
-¬Ì	 Ì	Ò	
-Ò	ß	 ß	à	
-à	á	 á	â	
-â	ê	 ê	ë	
-ë	ø	 ø	ù	
-ù	
- 
-‘
-
-‘
-¡
- ¡
-¢
-
-¢
-¹
- ¹
-º
-
-º
-Ã
- Ã
-Ä
-
-Ä
-Ì
- Ì
-Í
-
-Í
-Û
- Û
-Ü
-
-Ü
-ò
- ò
-ó
-
-ó
- ‚
-‚’ ’“
-“ó óõõááã
-ãá 
-áã 
-ãå åæ
-æ× "(b7594366011010e50039bf3e157806f56c2ebbce2Kfile:///home/sentrix/machine_learning/DL/Labs/Lab02/knn_practice/A1/main.py:(file:///home/sentrix/machine_learning/DL
