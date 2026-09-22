@@ -229,3 +229,4 @@ cifar-10-python.tar.gz
 *.pickle
 data/
 datasets/
+Lectures/
