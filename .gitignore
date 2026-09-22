@@ -216,3 +216,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Datasets
+cifar-10-batches-py/
+cifar-10-python.tar.gz
+*.tar.gz
+*.zip
+*.npy
+*.npz
+*.h5
+*.pkl
+*.pickle
+data/
+datasets/
