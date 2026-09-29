@@ -131,9 +131,9 @@ def compute_distances_no_loops(x_train: torch.Tensor, x_test: torch.Tensor):
     x_train = x_train.reshape(num_train, -1)
     x_test = x_test.reshape(num_test, -1)
 
-    x_train_sq = torch.sum(x_train ** 2, dim=1, keepdim=True)
+    x_train_sq = torch.sum(x_train**2, dim=1, keepdim=True)
 
-    x_test_sq = torch.sum(x_test ** 2, dim=1).reshape(1, -1)
+    x_test_sq = torch.sum(x_test**2, dim=1).reshape(1, -1)
 
     twoxy = 2 * (x_train @ x_test.t())
 
